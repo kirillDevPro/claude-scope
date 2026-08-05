@@ -5,12 +5,9 @@
  * Detects running dev servers by parsing system process list.
  */
 
-import { execFile } from "node:child_process";
-import { promisify } from "node:util";
-
-import type { DetectedServer, ExecFileFn, ProcessPattern } from "./detector-types.js";
-
-const execFileAsync = promisify(execFile);
+import { EXEC_TIMEOUTS } from "../../constants.js";
+import { defaultExecFile, type ExecFileFn } from "../../utils/exec.js";
+import type { DetectedServer, ProcessPattern } from "./detector-types.js";
 
 /**
  * Process Detector
@@ -40,7 +37,7 @@ export class ProcessDetector {
    * @param execFn - Optional execFile function for testing (dependency injection)
    */
   constructor(execFn?: ExecFileFn) {
-    this.execFn = execFn ?? execFileAsync;
+    this.execFn = execFn ?? defaultExecFile;
   }
 
   /**
@@ -50,7 +47,7 @@ export class ProcessDetector {
   async detect(): Promise<DetectedServer | null> {
     try {
       const { stdout } = await this.execFn("ps", ["aux"], {
-        timeout: 1000,
+        timeout: EXEC_TIMEOUTS.PROCESS_LIST_MS,
       });
 
       for (const pattern of this.processPatterns) {
