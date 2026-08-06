@@ -144,11 +144,18 @@ function fail(message) {
  * @param {string[]} files
  */
 function buildArgs(options, files) {
-  const args = ["--test", `--test-timeout=${options.timeout}`];
+  const args = ["--test"];
+
+  // Both flags are the hang protection, and Node 18 has neither - it rejects an
+  // unknown flag outright, taking the whole run with it. There the only
+  // backstop is whatever timeout the caller wraps the run in.
+  if (atLeastNode(20, 0)) {
+    args.push(`--test-timeout=${options.timeout}`);
+  }
 
   // A test that leaves a handle open (a prompt reading stdin, a live server)
   // otherwise wedges the run after the reporter is already done.
-  if (supportsForceExit()) {
+  if (atLeastNode(20, 14)) {
     args.push("--test-force-exit");
   }
 
@@ -156,11 +163,14 @@ function buildArgs(options, files) {
 }
 
 /**
- * Whether this Node build accepts --test-force-exit (added in 20.14)
+ * Whether the running Node is at least the given version
+ *
+ * @param {number} wantMajor
+ * @param {number} wantMinor
  */
-function supportsForceExit() {
+function atLeastNode(wantMajor, wantMinor) {
   const [major, minor] = process.versions.node.split(".").map(Number);
-  return major > 20 || (major === 20 && minor >= 14);
+  return major > wantMajor || (major === wantMajor && minor >= wantMinor);
 }
 
 const options = parseArgs(process.argv.slice(2));
