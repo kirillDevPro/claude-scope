@@ -29,8 +29,10 @@ jobs:
           cache: 'npm'
           registry-url: 'https://registry.npmjs.org'
 
+      # See ci.yml: the postinstall skill installer is a bash script, and a
+      # release must not depend on the runner's shell.
       - name: Install dependencies
-        run: npm ci
+        run: npm ci --ignore-scripts
 
       - name: Run Biome checks
         run: biome ci .
@@ -38,12 +40,11 @@ jobs:
       - name: Build project
         run: npm run build
 
-      - name: Run tests
-        run: npm test
-
-      - name: Generate coverage
+      # Runs the whole suite under c8, so a separate `npm test` step would only
+      # run all 1052 tests a second time. Thresholds come from .c8rc.json, and
+      # a release that misses them is not one to publish.
+      - name: Run tests with coverage
         run: npm run test:coverage
-        continue-on-error: true
 
       - name: Publish to npm
         run: npm publish
