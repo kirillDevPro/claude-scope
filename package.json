@@ -11,12 +11,12 @@
   "files": [
     "dist/claude-scope.cjs",
     ".claude/skills/",
-    "scripts/install-skill.sh",
+    "scripts/install-skill.mjs",
     "README.md",
     "LICENSE.md"
   ],
   "scripts": {
-    "postinstall": "bash scripts/install-skill.sh 2>/dev/null || true",
+    "postinstall": "node scripts/install-skill.mjs",
     "prepack": "npm run build",
     "build": "npm run build:tsc && npm run build:bundle",
     "build:tsc": "tsc",
@@ -27,13 +27,14 @@
     "test:integration": "node scripts/run-tests.mjs integration",
     "test:e2e": "node scripts/run-tests.mjs e2e",
     "test:list": "node scripts/run-tests.mjs --list",
-    "test:coverage": "c8 --reporter=text --reporter=html node scripts/run-tests.mjs",
+    "test:coverage": "c8 node scripts/run-tests.mjs",
     "test:snapshot": "node scripts/run-tests.mjs --update-snapshots",
     "test:snapshot:verify": "npm test",
     "dev": "tsx src/index.ts",
     "prepare": "husky",
     "lint": "biome check .",
-    "lint:fix": "biome check --write ."
+    "lint:fix": "biome check --write .",
+    "lint:ci": "biome ci ."
   },
   "devDependencies": {
     "@biomejs/biome": "^2.3.13",
