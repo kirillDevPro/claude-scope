@@ -32,7 +32,6 @@ jobs:
         with:
           node-version: '20'
           cache: 'npm'
-          cache-dependency-path: package-lock.json
 
       - name: Install dependencies
         run: npm ci --ignore-scripts
@@ -41,7 +40,7 @@ jobs:
       # installed `latest`: with two versions in play, a Biome release could
       # turn this job red without a single commit to the repo - and did.
       - name: Run Biome checks
-        run: npx biome ci .
+        run: npm run lint:ci
 
   test:
     name: Tests (${{ matrix.os }}, node ${{ matrix.node }})
@@ -61,10 +60,14 @@ jobs:
         # and needs only one node version - pinning those cells to 20 means a
         # failure there is unambiguously about the platform.
         include:
+          # Node 18 has neither --test-timeout nor --test-force-exit, so this
+          # cell runs without per-test hang protection; timeout-minutes above
+          # is its only backstop.
           - os: ubuntu-latest
             node: '18'
           - os: ubuntu-latest
             node: '20'
+            coverage: true
           - os: ubuntu-latest
             node: '22'
           - os: windows-latest
@@ -81,32 +84,30 @@ jobs:
         with:
           node-version: ${{ matrix.node }}
           cache: 'npm'
-          cache-dependency-path: package-lock.json
 
-      # --ignore-scripts: the postinstall skill installer is a bash script and
-      # cmd.exe cannot run it. Nothing else in the tree needs an install
-      # lifecycle - esbuild resolves its binary from an optional platform
-      # package - and CI has no business installing a skill into the runner.
+      # --ignore-scripts: postinstall writes a skill into the user's home
+      # directory, which CI has no business doing. Nothing else in the tree
+      # needs an install lifecycle - esbuild resolves its binary from an
+      # optional platform package.
       - name: Install dependencies
         run: npm ci --ignore-scripts
 
       - name: Build project
         run: npm run build
 
-      # Coverage runs on one cell only: c8's source-map paths differ per OS, so
-      # merging five reports would compare different denominators.
+      # Coverage runs on the one cell flagged for it: c8's source-map paths
+      # differ per OS, so merging five reports would compare different
+      # denominators. Which cell that is, is declared once, on the matrix.
       - name: Run tests with coverage
-        if: matrix.os == 'ubuntu-latest' && matrix.node == '20'
-        # Discovery lives in scripts/run-tests.mjs and the thresholds live in
-        # .c8rc.json, so this job cannot drift from what runs locally.
-        run: npx c8 --reporter=lcov --reporter=text node scripts/run-tests.mjs
+        if: matrix.coverage
+        run: npm run test:coverage
 
       - name: Run tests
-        if: matrix.os != 'ubuntu-latest' || matrix.node != '20'
+        if: ${{ !matrix.coverage }}
         run: npm test
 
       - name: Upload coverage reports to Codecov
-        if: matrix.os == 'ubuntu-latest' && matrix.node == '20'
+        if: matrix.coverage
         uses: codecov/codecov-action@v5
         with:
           token: ${{ secrets.CODECOV_TOKEN }}
